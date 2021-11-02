@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "http-server ./ -c-1",
     "build": "webpack",
     "watch": "webpack -w",
     "clean": "rm -rdf node_modules",
@@ -13,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babylonjs/loaders": "^4.2.0",
     "babylonjs": "^4.2.0",
     "babylonjs-gui": "^4.2.0",
     "babylonjs-loaders": "^4.2.0",
