@@ -1,5 +1,6 @@
 import * as BABYLON from 'babylonjs';
 import * as BABYLON_GUI from 'babylonjs-gui';
+import 'babylonjs-loaders';
 import "@babylonjs/loaders/glTF";
 
 export default class MyScene {
@@ -8,6 +9,8 @@ export default class MyScene {
     private _camera: BABYLON.ArcRotateCamera;
     private _light: BABYLON.HemisphericLight;
     private _houses: BABYLON.InstancedMesh[] = [];
+    private _house: BABYLON.Mesh;
+    private _fountain: BABYLON.Mesh;
 
     public scene: BABYLON.Scene;
 
@@ -108,11 +111,31 @@ export default class MyScene {
         const box = this.buildBox();
         const roof = this.buildRoof();
 
-        return BABYLON.Mesh.MergeMeshes([box, roof], true, false, null, false, true);
+        const house = BABYLON.Mesh.MergeMeshes([box, roof], true, false, null, false, true);
+
+        const animHouse = new BABYLON.Animation("houseSpin", "rotation.y", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+        const houseKeys = [];
+
+        houseKeys.push({
+            frame: 0,
+            value: 0
+        });
+
+        houseKeys.push({
+            frame: 30,
+            value: 2 * Math.PI
+        });
+
+        animHouse.setKeys(houseKeys);
+
+        house.animations = [];
+        house.animations.push(animHouse);
+
+        return house;
     } 
 
     addHouses() : void {
-        const house = this.buildHouse();
+        this._house = this.buildHouse();
 
         const places: {
             rotation: number,
@@ -138,17 +161,21 @@ export default class MyScene {
         // places.push({rotation: -Math.PI / 3, x: 6, z: 4});
 
         
-        places.forEach((place, i) => {
-            let tempHouse: BABYLON.InstancedMesh = house.createInstance('house_' + i);
+        // places.forEach((place, i) => {
+        //     let tempHouse: BABYLON.InstancedMesh = house.createInstance('house_' + i);
 
-            tempHouse.rotation.y = place.rotation;
-            tempHouse.position.x = place.x;
-            tempHouse.position.z = place.z;
+        //     tempHouse.rotation.y = place.rotation;
+        //     tempHouse.position.x = place.x;
+        //     tempHouse.position.z = place.z;
 
-            this._houses.push(tempHouse);
-        });
+        //     this._houses.push(tempHouse);
+        // });
 
-        this.scene.removeMesh(house);
+        this._house.rotation.y = places[0].rotation;
+        this._house.position.x = places[0].x;
+        this._house.position.z = places[0].z;
+
+        // this.scene.removeMesh(house);
     }
 
     addGround() : void {
@@ -171,70 +198,68 @@ export default class MyScene {
     }
 
     addCar(): void {
-        // BABYLON.SceneLoader.ImportMeshAsync('', 'https://assets.babylonjs.com/meshes/', 'car.babylon').then(() => {
-        BABYLON.SceneLoader.ImportMesh('', 'https://raw.githubusercontent.com/BabylonJS/MeshesLibrary/master/', 'PBR_Spheres.glb', this.scene, (meshes) => {
-            // const car = this.scene.getMeshByName('car');
-            console.log(meshes);
-            // const car = res.meshes[0];
-            // car.position.y = 0.16;
-            // car.rotation.z = Math.PI * -0.5;
-            // car.position.x = car.position.x + 0.5;
-
-            // const wheelRB = this.scene.getMeshByName('wheelRB');
-            // const wheelRF = this.scene.getMeshByName('wheelRF');
-            // const wheelLB = this.scene.getMeshByName('wheelLB');
-            // const wheelLF = this.scene.getMeshByName('wheelLF');
-            // this.scene.beginAnimation(wheelRB, 0, 30, true);
-            // this.scene.beginAnimation(wheelRF, 0, 30, true);
-            // this.scene.beginAnimation(wheelLB, 0, 30, true);
-            // this.scene.beginAnimation(wheelLF, 0, 30, true);
+        BABYLON.SceneLoader.ImportMeshAsync('', 'https://www.babylonjs-playground.com/scenes/Buggy/glTF-Draco/', 'Buggy.gltf').then((result) => {
+            const car = result.meshes[0];
+            
+            car.scaling = new BABYLON.Vector3(0.005, 0.005, 0.005);
+            car.position.y = 0.06;
 
             this._camera.lockedTarget = car;
-            this._camera.radius = 1.5;
+            this._camera.radius = 8;
+            this._camera.alpha = Math.PI * 0.5;
 
-            // const gamepadManager: BABYLON.GamepadManager = new BABYLON.GamepadManager();
+            const gamepadManager: BABYLON.GamepadManager = new BABYLON.GamepadManager();
 
-            // gamepadManager.onGamepadConnectedObservable.add((gamepad, state) => {
-            //     console.log('Conneted' + gamepad.id);
+            gamepadManager.onGamepadConnectedObservable.add((gamepad, state) => {
+                console.log('Conneted' + gamepad.id);
 
-            //     gamepad.onleftstickchanged((values) => {
-            //         if (values.y > 0.25 && !this.checkCollision(car)) {
-            //             car.position.z = car.position.z - 0.1;
-            //         } else if (values.y < -0.25 && !this.checkCollision(car)) {
-            //             car.position.z = car.position.z + 0.1;
-            //         } else if (values.y > 0.25 && this.checkCollision(car)) {
-            //             car.position.z = car.position.z + 0.15;
-            //         } else if (values.y < -0.25 && this.checkCollision(car)) {
-            //             car.position.z = car.position.z - 0.15;
-            //         }
+                gamepad.onleftstickchanged((values) => {
+                    if (values.y > 0.25 && !this.checkCollision(car)) {
+                        car.position.z = car.position.z + 0.1;
+                    } else if (values.y < -0.25 && !this.checkCollision(car)) {
+                        car.position.z = car.position.z - 0.1;
+                    } else if (values.y > 0.25 && this.checkCollision(car)) {
+                        car.position.z = car.position.z - 0.15;
+                    } else if (values.y < -0.25 && this.checkCollision(car)) {
+                        car.position.z = car.position.z + 0.15;
+                    }
 
-            //         if (values.x > 0.25 && !this.checkCollision(car)) {
-            //             car.position.x = car.position.x + 0.1;
-            //         } else if (values.x < -0.25 && !this.checkCollision(car)) {
-            //             car.position.x = car.position.x - 0.1;
-            //         } else if (values.x > 0.25 && this.checkCollision(car)) {
-            //             car.position.x = car.position.x - 0.15;
-            //         } else if (values.x < -0.25 && this.checkCollision(car)) {
-            //             car.position.x = car.position.x + 0.15;
-            //         }
-            //     });
+                    if (values.x > 0.25 && !this.checkCollision(car)) {
+                        car.position.x = car.position.x - 0.1;
+                    } else if (values.x < -0.25 && !this.checkCollision(car)) {
+                        car.position.x = car.position.x + 0.1;
+                    } else if (values.x > 0.25 && this.checkCollision(car)) {
+                        car.position.x = car.position.x + 0.15;
+                    } else if (values.x < -0.25 && this.checkCollision(car)) {
+                        car.position.x = car.position.x - 0.15;
+                    }
+                });
 
-            //     gamepad.onrightstickchanged((values) => {
-            //         if (values.x > 0.4) {
-            //             car.rotation.z = car.rotation.z + 0.05;
-            //             this._camera.alpha = this._camera.alpha - 0.05;
-            //         } else if (values.x < -0.4) {
-            //             car.rotation.z = car.rotation.z - 0.05;
-            //             this._camera.alpha = this._camera.alpha + 0.05;
-            //         }
+                gamepad.onrightstickchanged((values) => {
+                    if (values.x > 0.4) {
+                        car.rotation.z = car.rotation.z + 0.05;
+                        this._camera.alpha = this._camera.alpha - 0.05;
+                    } else if (values.x < -0.4) {
+                        car.rotation.z = car.rotation.z - 0.05;
+                        this._camera.alpha = this._camera.alpha + 0.05;
+                    }
 
-            //         if (values.y > 0.4) {
-            //             this._camera.radius = this._camera.radius + 0.05;
-            //         } else if (values.y < -0.4) {
-            //             this._camera.radius = this._camera.radius - 0.05;
-            //         }
-            //     });
-            // });
+                    if (values.y > 0.4) {
+                        this._camera.radius = this._camera.radius + 0.05;
+                    } else if (values.y < -0.4) {
+                        this._camera.radius = this._camera.radius - 0.05;
+                    }
+                });
+
+                //@ts-ignore
+                gamepad.onButtonDownObservable.add((button, state) => {
+                    if (BABYLON.Xbox360Button[button] === 'A') {
+                        this.scene.beginAnimation(this._house, 0, 30, true);
+                    } else if (BABYLON.Xbox360Button[button] === 'B') {
+                        this.scene.stopAnimation(this._house);
+                    }
+                })
+            });
         });
     }
 
@@ -270,14 +295,14 @@ export default class MyScene {
         ];
 
         //Create lathed fountain
-        const fountain: BABYLON.Mesh = BABYLON.MeshBuilder.CreateLathe('fountain', { shape: fountainOutline, sideOrientation: BABYLON.Mesh.DOUBLESIDE });
-        fountain.position.x = -4;
-        fountain.position.z = -6;
+        this._fountain = BABYLON.MeshBuilder.CreateLathe('fountain', { shape: fountainOutline, sideOrientation: BABYLON.Mesh.DOUBLESIDE });
+        this._fountain.position.x = -4;
+        this._fountain.position.z = -6;
 
         //Switch fountain on and off
         let switched = false;
         const pointerDown = (mesh) => {
-            if (mesh === fountain) {
+            if (mesh === this._fountain) {
                 switched = !switched;
                 if (switched) {
                     // Start the particle system
@@ -374,14 +399,14 @@ export default class MyScene {
 
     checkCollision(car: BABYLON.AbstractMesh) {
         let collided;
-        this._houses.forEach((house) => {
-            if (house.intersectsMesh(car)) {
-                collided = true;
-                return collided;
-            } else if (!house.intersectsMesh(car)) {
-                collided = false;
-            }
-        });
+        // this._houses.forEach((house) => {
+        if (this._house.intersectsMesh(car) || this._fountain.intersectsMesh(car)) {
+            collided = true;
+            return collided;
+        } else if (!this._house.intersectsMesh(car) || !this._fountain.intersectsMesh(car)) {
+            collided = false;
+        }
+        // });
         return collided;
     }
 
